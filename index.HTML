@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Mềm Tính Chỉ Số FCR Thủy Sản Chuẩn</title>
+    <!-- Thư viện Chart.js để vẽ biểu đồ đồng hồ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-blue: #0284c7;
+            --dark-blue: #0f172a;
+            --light-blue: #e0f2fe;
+            --good-green: #22c55e;
+            --warning-amber: #f59e0b;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            /* Hình nền biển sâu thực tế, tích hợp ảnh cá tôm mờ mịn làm nền background */
+            background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(2, 132, 199, 0.75)), 
+                        url('https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--light-blue);
+            font-size: 1.1rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-blue);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Tabs phân loại Cá / Tôm */
+        .species-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-blue);
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: var(--light-blue);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(15, 23, 42, 0.6);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-blue);
+        }
+
+        .calc-btn {
+            width: 100%;
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        .calc-btn:hover {
+            background: #16a34a;
+        }
+
+        /* Khu vực hiển thị kết quả trực quan */
+        .result-zone {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fcr-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 10px 0;
+            text-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .comment-box {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-blue);
+            text-align: left;
+            width: 100%;
+            margin-top: 15px;
+            line-height: 1.5;
+        }
+
+        /* Biểu đồ đồng hồ */
+        .chart-container {
+            position: relative;
+            width: 280px;
+            height: 160px;
+            margin: 0 auto;
+        }
+
+        /* Bảng lịch sử */
+        .history-card {
+            grid-column: 1 / -1;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background-color: rgba(2, 132, 199, 0.3);
+            color: var(--light-blue);
+        }
+
+        tr:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .clear-btn {
+            background: transparent;
+            color: var(--danger-red);
+            border: 1px solid var(--danger-red);
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+        .clear-btn:hover {
+            background: var(--danger-red);
+            color: white;
+        }
+
+        /* Tiêu chuẩn tham khảo */
+        .standards-list {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-top: 15px;
+        }
+        .standards-list li {
+            margin-bottom: 5px;
+            list-style-type: square;
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>HỆ THỐNG GIÁM SÁT CHỈ SỐ FCR THỦY SẢN</h1>
+        <p>Tối ưu hóa lượng thức ăn - Nâng cao hiệu quả kinh tế ao nuôi</p>
+    </header>
+
+    <div class="main-grid">
+        <!-- CỘT TRÁI: NHẬP LIỆU -->
+        <div class="card">
+            <div class="card-title">🐟 🦐 Thông Số Ao Nuôi</div>
+            
+            <div class="species-tabs">
+                <button type="button" class="tab-btn active" onclick="setSpecies('ca')">FCR CÁ</button>
+                <button type="button" class="tab-btn" onclick="setSpecies('tom')">FCR TÔM</button>
+            </div>
+
+            <form id="fcrForm" onsubmit="calculateFCR(event)">
+                <div class="input-group">
+                    <label id="feedLabel" for="totalFeed">Tổng lượng thức ăn đã cho ăn (kg):</label>
+                    <input type="number" id="totalFeed" step="any" required placeholder="Ví dụ: 1500">
+                </div>
+                
+                <div class="input-group">
+                    <label id="harvestLabel" for="totalHarvest">Tổng khối lượng sản lượng thu hoạch (kg):</label>
+                    <input type="number" id="totalHarvest" step="any" required placeholder="Ví dụ: 1000">
+                </div>
+
+                <button type="submit" class="calc-btn">TÍNH KẾT QUẢ & PHÂN TÍCH</button>
+            </form>
+
+            <div class="standards-list">
+                <strong>💡 Tiêu chuẩn FCR tham khảo:</strong>
+                <ul id="standardsText">
+                    <li>Đối với Cá: FCR lý tưởng (1.2 - 1.5). Tốt (< 1.2). Cảnh báo (> 1.6: tốn mồi, ô nhiễm nước).</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI: KẾT QUẢ VÀ ĐỒNG HỒ TRỰC QUAN -->
+        <div class="card result-zone">
+            <div class="card-title" style="width:100%">📊 Kết Quả Phân Tích</div>
+            
+            <!-- Biểu đồ kim đồng hồ -->
+            <div class="chart-container">
+                <canvas id="gaugeChart"></canvas>
+            </div>
+
+            <div class="fcr-number" id="fcrDisplay">0.00</div>
+            <div id="statusBadge" class="badge" style="background: grey;">Chưa có dữ liệu</div>
+            
+            <div class="comment-box" id="commentDisplay">
+                Vui lòng điền thông số khối lượng thức ăn và sản lượng thu hoạch bên cạnh, sau đó nhấn nút tính toán để xem nhận xét từ chuyên gia thủy sản.
+            </div>
+        </div>
+
+        <!-- BẢNG LỊCH SỬ -->
+        <div class="card history-card">
+            <div class="card-title">
+                ⏱️ Lịch Sử Các Lần Tính Toán 
+                <button class="clear-btn" onclick="clearHistory()">Xóa lịch sử</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Loài</th>
+                            <th>Tổng thức ăn (kg)</th>
+                            <th>Thu hoạch (kg)</th>
+                            <th>Chỉ số FCR</th>
+                            <th>Đánh giá</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <!-- Dữ liệu lịch sử sẽ tự động chèn vào đây -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSpecies = 'ca'; // Mặc định là cá
+    let myGaugeChart = null;
+
+    // Thiết lập chọn Cá hoặc Tôm
+    function setSpecies(species) {
+        currentSpecies = species;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        if(species === 'ca') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('standardsText').innerHTML = `
+                <li>Đối với Cá: FCR lý tưởng (1.2 - 1.5). Xuất sắc (< 1.2). Cảnh báo (> 1.6: lãng phí thức ăn, có nguy cơ ô nhiễm nguồn nước ao).</li>
+            `;
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('standardsText').innerHTML = `
+                <li>Đối với Tôm: FCR lý tưởng (1.0 - 1.3). Xuất sắc (< 1.0). Cảnh báo (> 1.5: quản lý thức ăn chưa tốt hoặc tôm hao hụt đầu con).</li>
+            `;
+        }
+        // Reset màn hình kết quả tạm thời
+        resetResult();
+    }
+
+    // Khởi tạo biểu đồ đồng hồ Gauge ban đầu
+    function initChart(value = 0) {
+        const ctx = document.getElementById('gaugeChart').getContext('2d');
+        
+        if (myGaugeChart) {
+            myGaugeChart.destroy();
+        }
+
+        // Đảm bảo kim nằm trong khoảng 0 - 3 để hiển thị trực quan
+        let pointerValue = value > 3 ? 3 : value;
+
+        myGaugeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [1.2, 0.4, 1.4], // Tương ứng các phân vùng trên đồng hồ: Tốt - Trung Bình - Kém
+                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                    borderWidth: 0,
+                    needleValue: pointerValue
+                }]
+            },
+            options: {
+                rotation: -90,
+                circumference: 180,
+                cutout: '75%',
+                plugins: {
+                    tooltip: { enabled: false },
+                    legend: { display: false }
+                },
+                aspectRatio: 1.75,
+                responsive: true
+            },
+            plugins: [{
+                id: 'gaugeNeedle',
+                afterDatasetsDraw(chart) {
+                    const { ctx, data, chartArea: { width, height } } = chart;
+                    ctx.save();
+                    
+                    const dataTotal = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    const needleValue = data.datasets[0].needleValue;
+                    
+                    // Tính góc quay của kim dựa trên giá trị FCR thực tế (giới hạn tối đa hiển thị là 3.0)
+                    const angle = Math.PI + (Math.PI * (needleValue / 3.0));
+                    
+                    const cx = width / 2;
+                    const cy = chart.backgroundColors ? height : height - 6;
+
+                    // Vẽ trục quay của kim
+                    ctx.translate(cx, cy);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -4);
+                    ctx.lineTo(width / 2.5, 0); // Độ dài của kim
+                    ctx.lineTo(0, 4);
+                    ctx.closePath();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    
+                    // Vẽ tâm đồng hồ
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#0284c7';
+                    ctx.fill();
+                    
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    function resetResult() {
+        document.getElementById('fcrDisplay').innerText = "0.00";
+        document.getElementById('statusBadge').innerText = "Chưa tính toán";
+        document.getElementById('statusBadge').style.backgroundColor = "grey";
+        initChart(0);
+    }
+
+    // Xử lý logic tính toán FCR chính
+    function calculateFCR(event) {
+        event.preventDefault();
+        
+        const feed = parseFloat(document.getElementById('totalFeed').value);
+        const harvest = parseFloat(document.getElementById('totalHarvest').value);
+
+        if (harvest <= 0) {
+            alert("Khối lượng thu hoạch phải lớn hơn 0!");
+            return;
+        }
+
+        // Tính công thức FCR
+        const fcr = feed / harvest;
+        const fcrFixed = fcr.toFixed(2);
+
+        document.getElementById('fcrDisplay').innerText = fcrFixed;
+
+        let status = "";
+        let badgeColor = "";
+        let comment = "";
+
+        // Đánh giá dựa trên loại vật nuôi
+        if (currentSpecies === 'ca') {
+            if (fcr < 1.2) {
+                status = "Xuất sắc";
+                badgeColor = varColor('--good-green');
+                comment = `FCR cực kỳ tối ưu (${fcrFixed}). Trang trại quản lý thức ăn hoàn hảo, cá hấp thụ dinh dưỡng tối đa và tốc độ tăng trưởng rất đều.`;
+            } else if (fcr >= 1.2 && fcr <= 1.5) {
+                status = "Đạt chuẩn";
+                badgeColor = varColor('--primary-blue');
+                comment = `Chỉ số FCR lý tưởng (${fcrFixed}) nằm trong khung chuẩn kinh tế của mô hình nuôi cá. Hãy tiếp tục duy trì chế độ này.`;
+            } else if (fcr > 1.5 && fcr <= 1.8) {
+                status = "Hơi cao";
+                badgeColor = varColor('--warning-amber');
+                comment = `FCR ở mức nguy cơ (${fcrFixed}). Thức ăn bắt đầu bị dư thừa nhẹ hoặc cá hấp thụ kém. Nên kiểm tra lại sàng ăn, môi trường nước hoặc chất lượng con giống.`;
+            } else {
+                status = "Lãng phí nặng";
+                badgeColor = varColor('--danger-red');
+                comment = `Cảnh báo! FCR quá cao (${fcrFixed}). Thức ăn thất thoát nghiêm trọng làm tăng mạnh giá thành sản xuất và gây ô nhiễm đáy ao rất nặng. Cần cắt giảm cữ ăn và xử lý vi sinh gấp.`;
+            }
+        } else { // Cho Tôm
+            if (fcr < 1.0) {
+                status = "Xuất sắc";
+                badgeColor = varColor('--good-green');
+                comment = `FCR ấn tượng (${fcrFixed}). Tôm phát triển vượt bậc, quản lý nhá (sàng) siêu chuẩn, không có lượng thức ăn dư thừa sinh độc tố khí độc.`;
+            } else if (fcr >= 1.0 && fcr <= 1.3) {
+                status = "Đạt chuẩn";
+                badgeColor = varColor('--primary-blue');
+                comment = `Chỉ số FCR đạt chuẩn thâm canh (${fcrFixed}). Quá trình chuyển hóa năng lượng ổn định, kiểm soát chi phí thức ăn nằm trong tầm tay.`;
+            } else if (fcr > 1.3 && fcr <= 1.6) {
+                status = "Hơi cao";
+                badgeColor = varColor('--warning-amber');
+                comment = `FCR vượt chuẩn (${fcrFixed}). Tôm có dấu hiệu chậm lớn hoặc tỷ lệ sống bị hao hụt. Cần kiểm tra ngay mật độ và sàng ăn sau mỗi cữ.`;
+            } else {
+                status = "Lãng phí nặng";
+                badgeColor = varColor('--danger-red');
+                comment = `Báo động nguy hiểm! FCR ở mức (${fcrFixed}). Tôm bị stress, nhiễm bệnh đường ruột hoặc hao hụt đầu con nghiêm trọng dẫn đến tổng khối lượng thu hoạch thấp so với lượng mồi đổ xuống.`;
+            }
+        }
+
+        // Cập nhật giao diện kết quả
+        const badge = document.getElementById('statusBadge');
+        badge.innerText = status.toUpperCase();
+        badge.style.backgroundColor = badgeColor;
+        document.getElementById('commentDisplay').innerText = comment;
+
+        // Cập nhật kim biểu đồ
+        initChart(fcr);
+
+        // Lưu vào lịch sử
+        saveToHistory(currentSpecies === 'ca' ? 'Cá' : 'Tôm', feed, harvest, fcrFixed, status);
+    }
+
+    function varColor(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    // Quản lý và lưu lịch sử bằng LocalStorage
+    function saveToHistory(species, feed, harvest, fcr, evaluation) {
+        const now = new Date();
+        const timeStr = `${now.getDate()}/${now.getMonth()+1} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        const record = { timeStr, species, feed, harvest, fcr, evaluation };
+        
+        let history = JSON.parse(localStorage.getItem('fcrHistory')) || [];
+        history.unshift(record); // Thêm lên đầu danh sách
+        
+        localStorage.setItem('fcrHistory', JSON.stringify(history));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('fcrHistory')) || [];
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+
+        if(history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #aaa;">Chưa có lịch sử tính toán nào được ghi lại.</td></tr>`;
+            return;
+        }
+
+        history.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.timeStr}</td>
+                <td><strong>${item.species}</strong></td>
+                <td>${parseFloat(item.feed).toLocaleString()}</td>
+                <td>${parseFloat(item.harvest).toLocaleString()}</td>
+                <td style="font-weight:bold; color:#e0f2fe;">${item.fcr}</td>
+                <td>${item.evaluation}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function clearHistory() {
+        if(confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử đo đạc không?")) {
+            localStorage.removeItem('fcrHistory');
+            renderHistory();
+        }
+    }
+
+    // Chạy khi vừa mở trang
+    window.onload = function() {
+        initChart(0);
+        renderHistory();
+        setSpecies('ca');
+    };
+</script>
+</body>
+</html>
